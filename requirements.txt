@@ -1,0 +1,17 @@
+# Requires Python 3.9+
+
+# FastAPI: Modern async web framework with automatic OpenAPI documentation.
+# Used to build the ticketing API with minimal boilerplate.
+fastapi>=0.115.0,<1.0.0
+
+# Uvicorn: ASGI server that runs FastAPI applications.
+# The standard extra includes websockets and watchfiles for hot reload.
+uvicorn[standard]>=0.30.0,<1.0.0
+
+# Pydantic: Data validation using Python type hints.
+# Provides request/response models with automatic validation and serialization.
+pydantic>=2.0.0,<3.0.0
+
+# OpenAI: Official client for OpenAI and Azure OpenAI APIs.
+# Used by the PR Review Bot and GenAI Agent for LLM interactions.
+openai>=2.0.0,<3.0.0

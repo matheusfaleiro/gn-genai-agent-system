@@ -1,4 +1,8 @@
-"""In-memory storage for tickets with thread safety."""
+"""In-memory storage for tickets with thread safety.
+
+This module provides a simple storage layer that keeps tickets in memory.
+All operations are thread-safe, suitable for concurrent API requests.
+"""
 
 import threading
 import uuid
@@ -9,14 +13,30 @@ from api.models import Ticket, TicketCreate, TicketStatus, TicketUpdate
 
 
 class TicketStorage:
-    """Thread-safe in-memory storage for tickets."""
+    """Thread-safe in-memory storage for tickets.
+
+    Uses a dictionary to store tickets and RLock for thread safety.
+    Data is lost when the application restarts.
+
+    Attributes:
+        _tickets: Internal dictionary mapping ticket IDs to Ticket objects.
+        _lock: Reentrant lock for thread-safe operations.
+    """
 
     def __init__(self):
+        """Initialize empty storage with a lock."""
         self._tickets: dict[str, Ticket] = {}
         self._lock = threading.RLock()
 
     def create(self, data: TicketCreate) -> Ticket:
-        """Create a new ticket and return it."""
+        """Create a new ticket.
+
+        Args:
+            data: Ticket creation data with title and description.
+
+        Returns:
+            The created ticket with generated ID and timestamp.
+        """
         with self._lock:
             ticket = Ticket(
                 id=str(uuid.uuid4()),
@@ -29,12 +49,26 @@ class TicketStorage:
             return ticket
 
     def get(self, ticket_id: str) -> Optional[Ticket]:
-        """Get a ticket by ID. Returns None if not found."""
+        """Get a ticket by ID.
+
+        Args:
+            ticket_id: The unique identifier of the ticket.
+
+        Returns:
+            The ticket if found, None otherwise.
+        """
         with self._lock:
             return self._tickets.get(ticket_id)
 
     def list_all(self, status: Optional[TicketStatus] = None) -> list[Ticket]:
-        """List all tickets, optionally filtered by status."""
+        """List all tickets, optionally filtered by status.
+
+        Args:
+            status: If provided, only return tickets with this status.
+
+        Returns:
+            List of tickets sorted by creation date (newest first).
+        """
         with self._lock:
             tickets = list(self._tickets.values())
             if status:
@@ -42,7 +76,15 @@ class TicketStorage:
             return sorted(tickets, key=lambda t: t.created, reverse=True)
 
     def update(self, ticket_id: str, data: TicketUpdate) -> Optional[Ticket]:
-        """Update a ticket. Returns None if not found."""
+        """Update an existing ticket.
+
+        Args:
+            ticket_id: The unique identifier of the ticket to update.
+            data: Fields to update. Only provided fields are modified.
+
+        Returns:
+            The updated ticket if found, None otherwise.
+        """
         with self._lock:
             ticket = self._tickets.get(ticket_id)
             if not ticket:
@@ -54,7 +96,14 @@ class TicketStorage:
             return updated_ticket
 
     def delete(self, ticket_id: str) -> bool:
-        """Delete a ticket. Returns True if deleted, False if not found."""
+        """Delete a ticket.
+
+        Args:
+            ticket_id: The unique identifier of the ticket to delete.
+
+        Returns:
+            True if the ticket was deleted, False if not found.
+        """
         with self._lock:
             if ticket_id in self._tickets:
                 del self._tickets[ticket_id]

@@ -6,7 +6,7 @@ All operations are thread-safe, suitable for concurrent API requests.
 
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from api.models import Ticket, TicketCreate, TicketStatus, TicketUpdate
@@ -42,7 +42,7 @@ class TicketStorage:
                 id=str(uuid.uuid4()),
                 title=data.title,
                 description=data.description,
-                created=datetime.utcnow(),
+                created=datetime.now(timezone.utc),
                 status=TicketStatus.OPEN,
             )
             self._tickets[ticket.id] = ticket
@@ -55,10 +55,11 @@ class TicketStorage:
             ticket_id: The unique identifier of the ticket.
 
         Returns:
-            The ticket if found, None otherwise.
+            A copy of the ticket if found, None otherwise.
         """
         with self._lock:
-            return self._tickets.get(ticket_id)
+            ticket = self._tickets.get(ticket_id)
+            return ticket.model_copy() if ticket else None
 
     def list_all(self, status: Optional[TicketStatus] = None) -> list[Ticket]:
         """List all tickets, optionally filtered by status.
@@ -67,13 +68,14 @@ class TicketStorage:
             status: If provided, only return tickets with this status.
 
         Returns:
-            List of tickets sorted by creation date (newest first).
+            List of ticket copies sorted by creation date (newest first).
         """
         with self._lock:
             tickets = list(self._tickets.values())
             if status:
                 tickets = [t for t in tickets if t.status == status]
-            return sorted(tickets, key=lambda t: t.created, reverse=True)
+            sorted_tickets = sorted(tickets, key=lambda t: t.created, reverse=True)
+            return [t.model_copy() for t in sorted_tickets]
 
     def update(self, ticket_id: str, data: TicketUpdate) -> Optional[Ticket]:
         """Update an existing ticket.
@@ -93,7 +95,7 @@ class TicketStorage:
             update_fields = data.model_dump(exclude_unset=True)
             updated_ticket = ticket.model_copy(update=update_fields)
             self._tickets[ticket_id] = updated_ticket
-            return updated_ticket
+            return updated_ticket.model_copy()
 
     def delete(self, ticket_id: str) -> bool:
         """Delete a ticket.

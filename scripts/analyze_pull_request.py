@@ -3,9 +3,11 @@
 
 import os
 import sys
+
 from openai import AzureOpenAI, OpenAI
 
-SYSTEM_PROMPT = """You are a code reviewer. Analyze the provided git diff and provide a concise review.
+SYSTEM_PROMPT = """You are a code reviewer. Analyze the provided git diff and provide
+a concise review.
 
 Focus on:
 1. Code quality and best practices
@@ -69,7 +71,8 @@ def analyze_diff(diff_content: str) -> str:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {
                     "role": "user",
-                    "content": f"Please review the following changes:\n\n```diff\n{diff_content}\n```",
+                    "content": f"Please review the following changes:\n\n"
+                    f"```diff\n{diff_content}\n```",
                 },
             ],
         )
@@ -88,7 +91,7 @@ def main():
     diff_file = sys.argv[1]
 
     try:
-        with open(diff_file, "r") as f:
+        with open(diff_file) as f:
             diff_content = f.read()
     except FileNotFoundError:
         print(f"Error: File {diff_file} not found")

@@ -39,13 +39,13 @@ class TicketStorage:
         """
         with self._lock:
             ticket = Ticket(
-                id=str(uuid.uuid4()),
+                id=uuid.uuid4(),
                 title=data.title,
                 description=data.description,
                 created=datetime.now(timezone.utc),
                 status=TicketStatus.OPEN,
             )
-            self._tickets[ticket.id] = ticket
+            self._tickets[str(ticket.id)] = ticket
             return ticket
 
     def get(self, ticket_id: str) -> Optional[Ticket]:

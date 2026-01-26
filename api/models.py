@@ -7,6 +7,7 @@ including request/response models and enumerations for ticket status.
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -68,7 +69,7 @@ class Ticket(BaseModel):
         resolution: Notes explaining how the issue was resolved.
     """
 
-    id: str
+    id: UUID
     title: str
     description: str
     created: datetime

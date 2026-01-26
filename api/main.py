@@ -6,6 +6,7 @@ error handling and validation.
 """
 
 from typing import Optional
+from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Query
 
@@ -58,11 +59,11 @@ async def list_tickets(
 
 
 @app.get("/tickets/{ticket_id}", response_model=Ticket)
-async def get_ticket(ticket_id: str):
+async def get_ticket(ticket_id: UUID):
     """Get a specific ticket by ID.
 
     Args:
-        ticket_id: The unique identifier of the ticket.
+        ticket_id: The unique identifier (UUID) of the ticket.
 
     Returns:
         The requested ticket.
@@ -70,7 +71,7 @@ async def get_ticket(ticket_id: str):
     Raises:
         HTTPException: 404 if ticket not found.
     """
-    ticket = storage.get(ticket_id)
+    ticket = storage.get(str(ticket_id))
     if not ticket:
         raise HTTPException(
             status_code=404,
@@ -80,11 +81,11 @@ async def get_ticket(ticket_id: str):
 
 
 @app.put("/tickets/{ticket_id}", response_model=Ticket)
-async def update_ticket(ticket_id: str, data: TicketUpdate):
+async def update_ticket(ticket_id: UUID, data: TicketUpdate):
     """Update an existing ticket.
 
     Args:
-        ticket_id: The unique identifier of the ticket to update.
+        ticket_id: The unique identifier (UUID) of the ticket to update.
         data: Fields to update. Only provided fields are modified.
 
     Returns:
@@ -94,7 +95,8 @@ async def update_ticket(ticket_id: str, data: TicketUpdate):
         HTTPException: 404 if ticket not found.
         HTTPException: 422 if status is RESOLVED but no resolution provided.
     """
-    existing = storage.get(ticket_id)
+    ticket_id_str = str(ticket_id)
+    existing = storage.get(ticket_id_str)
     if not existing:
         raise HTTPException(
             status_code=404,
@@ -111,20 +113,20 @@ async def update_ticket(ticket_id: str, data: TicketUpdate):
                 detail="Resolution is required when setting status to RESOLVED",
             )
 
-    return storage.update(ticket_id, data)
+    return storage.update(ticket_id_str, data)
 
 
 @app.delete("/tickets/{ticket_id}", status_code=204)
-async def delete_ticket(ticket_id: str):
+async def delete_ticket(ticket_id: UUID):
     """Delete a ticket.
 
     Args:
-        ticket_id: The unique identifier of the ticket to delete.
+        ticket_id: The unique identifier (UUID) of the ticket to delete.
 
     Raises:
         HTTPException: 404 if ticket not found.
     """
-    if not storage.delete(ticket_id):
+    if not storage.delete(str(ticket_id)):
         raise HTTPException(
             status_code=404,
             detail=f"Ticket with ID '{ticket_id}' not found",

@@ -26,8 +26,8 @@ class TicketStatus(str, Enum):
     CLOSED = "CLOSED"
 
 
-class TicketCreate(BaseModel):
-    """Request model for creating a new ticket.
+class TicketBase(BaseModel):
+    """Base model with common ticket fields.
 
     Attributes:
         title: Brief summary of the issue (1-200 characters).
@@ -36,6 +36,15 @@ class TicketCreate(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=1, max_length=5000)
+
+
+class TicketCreate(TicketBase):
+    """Request model for creating a new ticket.
+
+    Inherits title and description from TicketBase.
+    """
+
+    pass
 
 
 class TicketUpdate(BaseModel):
@@ -57,21 +66,19 @@ class TicketUpdate(BaseModel):
     resolution: Optional[str] = Field(None, max_length=2000)
 
 
-class Ticket(BaseModel):
+class Ticket(TicketBase):
     """Complete ticket model representing a support ticket.
+
+    Inherits title and description from TicketBase.
 
     Attributes:
         id: Unique identifier (UUID).
-        title: Brief summary of the issue.
-        description: Detailed explanation of the problem.
         created: Timestamp when the ticket was created.
         status: Current status of the ticket.
         resolution: Notes explaining how the issue was resolved.
     """
 
     id: UUID
-    title: str
-    description: str
     created: datetime
     status: TicketStatus = TicketStatus.OPEN
     resolution: Optional[str] = None

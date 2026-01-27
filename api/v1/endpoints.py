@@ -8,7 +8,7 @@ error handling and validation.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, status
 
 from api.models import Ticket, TicketCreate, TicketStatus, TicketUpdate
 from api.storage import storage
@@ -16,7 +16,7 @@ from api.storage import storage
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-@router.post("", response_model=Ticket, status_code=201)
+@router.post("", response_model=Ticket, status_code=status.HTTP_201_CREATED)
 async def create_ticket(data: TicketCreate):
     """Create a new ticket.
 
@@ -60,7 +60,7 @@ async def get_ticket(ticket_id: UUID):
     ticket = storage.get(str(ticket_id))
     if not ticket:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Ticket with ID '{ticket_id}' not found",
         )
     return ticket
@@ -85,7 +85,7 @@ async def update_ticket(ticket_id: UUID, data: TicketUpdate):
     existing = storage.get(ticket_id_str)
     if not existing:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Ticket with ID '{ticket_id}' not found",
         )
 
@@ -95,14 +95,14 @@ async def update_ticket(ticket_id: UUID, data: TicketUpdate):
         has_existing_resolution = existing.resolution is not None
         if not has_new_resolution and not has_existing_resolution:
             raise HTTPException(
-                status_code=422,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Resolution is required when setting status to RESOLVED",
             )
 
     return storage.update(ticket_id_str, data)
 
 
-@router.delete("/{ticket_id}", status_code=204)
+@router.delete("/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_ticket(ticket_id: UUID):
     """Delete a ticket.
 
@@ -114,7 +114,7 @@ async def delete_ticket(ticket_id: UUID):
     """
     if not storage.delete(str(ticket_id)):
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Ticket with ID '{ticket_id}' not found",
         )
     return None

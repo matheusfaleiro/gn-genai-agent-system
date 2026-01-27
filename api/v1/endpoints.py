@@ -1,36 +1,22 @@
-"""FastAPI ticketing API with CRUD operations.
+"""V1 API endpoints for ticket management.
 
 This module defines the REST API endpoints for managing support tickets.
-It provides to create, read, update, and delete operations with proper
+It provides create, read, update, and delete operations with proper
 error handling and validation.
 """
 
 from typing import Optional
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from api.models import Ticket, TicketCreate, TicketStatus, TicketUpdate
 from api.storage import storage
 
-app = FastAPI(
-    title="Ticketing API",
-    description="A mock ticketing API for GenAI agent integration",
-    version="1.0.0",
-)
+router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-@app.get("/")
-async def health_check():
-    """Check if the API is running.
-
-    Returns:
-        A dictionary with status and service name.
-    """
-    return {"status": "healthy", "service": "ticketing-api"}
-
-
-@app.post("/tickets", response_model=Ticket, status_code=201)
+@router.post("", response_model=Ticket, status_code=201)
 async def create_ticket(data: TicketCreate):
     """Create a new ticket.
 
@@ -43,7 +29,7 @@ async def create_ticket(data: TicketCreate):
     return storage.create(data)
 
 
-@app.get("/tickets", response_model=list[Ticket])
+@router.get("", response_model=list[Ticket])
 async def list_tickets(
     status: Optional[TicketStatus] = Query(None, description="Filter by status"),
 ):
@@ -58,7 +44,7 @@ async def list_tickets(
     return storage.list_all(status=status)
 
 
-@app.get("/tickets/{ticket_id}", response_model=Ticket)
+@router.get("/{ticket_id}", response_model=Ticket)
 async def get_ticket(ticket_id: UUID):
     """Get a specific ticket by ID.
 
@@ -80,7 +66,7 @@ async def get_ticket(ticket_id: UUID):
     return ticket
 
 
-@app.put("/tickets/{ticket_id}", response_model=Ticket)
+@router.put("/{ticket_id}", response_model=Ticket)
 async def update_ticket(ticket_id: UUID, data: TicketUpdate):
     """Update an existing ticket.
 
@@ -116,7 +102,7 @@ async def update_ticket(ticket_id: UUID, data: TicketUpdate):
     return storage.update(ticket_id_str, data)
 
 
-@app.delete("/tickets/{ticket_id}", status_code=204)
+@router.delete("/{ticket_id}", status_code=204)
 async def delete_ticket(ticket_id: UUID):
     """Delete a ticket.
 

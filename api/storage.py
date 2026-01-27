@@ -61,11 +61,18 @@ class TicketStorage:
             ticket = self._tickets.get(ticket_id)
             return ticket.model_copy() if ticket else None
 
-    def list_all(self, status: Optional[TicketStatus] = None) -> list[Ticket]:
-        """List all tickets, optionally filtered by status.
+    def list_all(
+        self,
+        status: Optional[TicketStatus] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Ticket]:
+        """List all tickets, optionally filtered by status, with pagination.
 
         Args:
             status: If provided, only return tickets with this status.
+            skip: Number of records to skip.
+            limit: Maximum number of records to return.
 
         Returns:
             List of ticket copies sorted by creation date (newest first).
@@ -75,7 +82,8 @@ class TicketStorage:
             if status:
                 tickets = [t for t in tickets if t.status == status]
             sorted_tickets = sorted(tickets, key=lambda t: t.created, reverse=True)
-            return [t.model_copy() for t in sorted_tickets]
+            paginated = sorted_tickets[skip : skip + limit]
+            return [t.model_copy() for t in paginated]
 
     def update(self, ticket_id: str, data: TicketUpdate) -> Optional[Ticket]:
         """Update an existing ticket.

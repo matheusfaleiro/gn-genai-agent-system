@@ -32,16 +32,20 @@ async def create_ticket(data: TicketCreate):
 @router.get("", response_model=list[Ticket])
 async def list_tickets(
     status: Optional[TicketStatus] = Query(None, description="Filter by status"),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
 ):
-    """List all tickets.
+    """List all tickets with pagination.
 
     Args:
         status: Optional filter to return only tickets with this status.
+        skip: Number of records to skip for pagination.
+        limit: Maximum number of records to return (1-1000).
 
     Returns:
         List of tickets sorted by creation date (newest first).
     """
-    return storage.list_all(status=status)
+    return storage.list_all(status=status, skip=skip, limit=limit)
 
 
 @router.get("/{ticket_id}", response_model=Ticket)

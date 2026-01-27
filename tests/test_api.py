@@ -93,6 +93,22 @@ class TestListTickets:
         assert response.status_code == 200
         assert len(response.json()) == 0
 
+    def test_list_tickets_pagination_returns_correct_subset(self, client):
+        """Should return paginated results when skip and limit are provided."""
+        # Create 3 tickets
+        for i in range(3):
+            client.post("/v1/tickets", json={"title": f"Ticket {i}", "description": "Test"})
+
+        # Get first page (limit 2)
+        response = client.get("/v1/tickets?limit=2")
+        assert response.status_code == 200
+        assert len(response.json()) == 2
+
+        # Get second page (skip 2, limit 2)
+        response = client.get("/v1/tickets?skip=2&limit=2")
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+
 
 class TestGetTicket:
     """Tests for getting a single ticket."""

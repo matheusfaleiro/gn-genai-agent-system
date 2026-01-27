@@ -201,3 +201,17 @@ class TestDeleteTicket:
         """Should return 422 when ticket ID is not a valid UUID."""
         response = client.delete("/v1/tickets/invalid-id")
         assert response.status_code == 422
+
+
+class TestStorageDirect:
+    """Direct tests for the storage module."""
+
+    def test_update_non_existent_ticket_returns_none(self):
+        """Should return None when updating a non-existent ticket."""
+        from api.models import TicketUpdate
+
+        result = storage.update(
+            "00000000-0000-0000-0000-000000000000",
+            TicketUpdate(title="Updated"),
+        )
+        assert result is None

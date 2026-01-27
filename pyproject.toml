@@ -23,8 +23,9 @@ testpaths = ["tests"]
 addopts = "-v"
 
 [tool.coverage.run]
-source = ["api"]
+source = ["api", "agent"]
 branch = true
+omit = ["agent/cli.py"]
 
 [tool.coverage.report]
 fail_under = 80

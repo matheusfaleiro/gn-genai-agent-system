@@ -1,5 +1,8 @@
 """Tests for the agent HTTP client."""
 
+from unittest.mock import MagicMock, patch
+
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -139,6 +142,15 @@ class TestTicketingClient:
         assert result["success"] is False
         assert result["status_code"] == 404
 
+    def test_update_ticket_description(self, agent_client):
+        """Should update ticket description."""
+        create_result = agent_client.create_ticket(title="Test", description="Original")
+        ticket_id = create_result["data"]["id"]
+
+        result = agent_client.update_ticket(ticket_id, description="Updated description")
+        assert result["success"] is True
+        assert result["data"]["description"] == "Updated description"
+
 
 class TestTicketingClientContextManager:
     """Tests for context manager support."""
@@ -149,3 +161,46 @@ class TestTicketingClientContextManager:
             assert client.client is not None
         # After exit, a client should be closed
         assert client.client.is_closed
+
+
+class TestTicketingClientErrorHandling:
+    """Tests for error handling edge cases."""
+
+    def test_connection_error(self):
+        """Should handle connection errors gracefully."""
+        with TicketingClient(base_url="http://localhost:9999") as client:
+            with patch.object(
+                client.client, "request", side_effect=httpx.ConnectError("Connection refused")
+            ):
+                result = client.list_tickets()
+
+        assert result["success"] is False
+        assert result["status_code"] is None
+        assert "Failed to connect" in result["error"]
+
+    def test_timeout_error(self):
+        """Should handle timeout errors gracefully."""
+        with TicketingClient() as client:
+            with patch.object(
+                client.client, "request", side_effect=httpx.TimeoutException("Request timed out")
+            ):
+                result = client.list_tickets()
+
+        assert result["success"] is False
+        assert result["status_code"] is None
+        assert "timed out" in result["error"]
+
+    def test_non_json_error_response(self):
+        """Should handle non-JSON error responses."""
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = "Internal Server Error"
+        mock_response.json.side_effect = ValueError("No JSON")
+
+        with TicketingClient() as client:
+            with patch.object(client.client, "request", return_value=mock_response):
+                result = client.list_tickets()
+
+        assert result["success"] is False
+        assert result["status_code"] == 500
+        assert result["error"] == "Internal Server Error"

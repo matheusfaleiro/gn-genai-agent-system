@@ -68,4 +68,4 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run tests with coverage
-        run: pytest tests/ --cov=api --cov=main --cov-report=term-missing --cov-fail-under=80
+        run: pytest tests/ --cov=api --cov=agent --cov=main --cov-report=term-missing --cov-fail-under=80

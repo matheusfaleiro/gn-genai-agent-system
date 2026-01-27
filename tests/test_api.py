@@ -139,38 +139,38 @@ class TestUpdateTicket:
     def test_update_ticket_valid_partial_update_returns_200_ok(self, client, sample_ticket):
         """Should successfully update specific fields (patch) and return 200."""
         ticket_id = sample_ticket["id"]
-        response = client.put(f"/v1/tickets/{ticket_id}", json={"title": "Updated title"})
+        response = client.patch(f"/v1/tickets/{ticket_id}", json={"title": "Updated title"})
         assert response.status_code == 200
         assert response.json()["title"] == "Updated title"
 
     def test_update_ticket_non_existent_id_returns_404(self, client):
         """Should return 404 Not Found when trying to update a missing ticket."""
         non_existent_uuid = "00000000-0000-0000-0000-000000000000"
-        response = client.put(f"/v1/tickets/{non_existent_uuid}", json={"title": "New title"})
+        response = client.patch(f"/v1/tickets/{non_existent_uuid}", json={"title": "New title"})
         assert response.status_code == 404
 
     def test_update_ticket_invalid_uuid_returns_422(self, client):
         """Should return 422 when ticket ID is not a valid UUID."""
-        response = client.put("/v1/tickets/invalid-id", json={"title": "New title"})
+        response = client.patch("/v1/tickets/invalid-id", json={"title": "New title"})
         assert response.status_code == 422
 
     def test_update_ticket_invalid_status_enum_returns_422(self, client, sample_ticket):
         """Should return 422 when status is not one of the allowed enum values."""
         ticket_id = sample_ticket["id"]
-        response = client.put(f"/v1/tickets/{ticket_id}", json={"status": "INVALID"})
+        response = client.patch(f"/v1/tickets/{ticket_id}", json={"status": "INVALID"})
         assert response.status_code == 422
 
     def test_update_resolved_without_resolution_returns_422(self, client, sample_ticket):
         """Should return 422 when status is set to RESOLVED without a resolution note."""
         ticket_id = sample_ticket["id"]
-        response = client.put(f"/v1/tickets/{ticket_id}", json={"status": "RESOLVED"})
+        response = client.patch(f"/v1/tickets/{ticket_id}", json={"status": "RESOLVED"})
         assert response.status_code == 422
         assert "Resolution is required" in response.json()["detail"]
 
     def test_update_ticket_status_resolved_with_note_returns_200(self, client, sample_ticket):
         """Should return 200 OK when resolving a ticket with the required resolution note."""
         ticket_id = sample_ticket["id"]
-        response = client.put(
+        response = client.patch(
             f"/v1/tickets/{ticket_id}", json={"status": "RESOLVED", "resolution": "Fixed the issue"}
         )
         assert response.status_code == 200

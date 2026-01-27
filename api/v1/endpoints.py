@@ -70,7 +70,7 @@ async def get_ticket(ticket_id: UUID):
     return ticket
 
 
-@router.put("/{ticket_id}", response_model=Ticket)
+@router.patch("/{ticket_id}", response_model=Ticket)
 async def update_ticket(ticket_id: UUID, data: TicketUpdate):
     """Update an existing ticket.
 

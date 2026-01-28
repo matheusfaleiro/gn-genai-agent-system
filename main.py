@@ -4,9 +4,7 @@ This module creates the FastAPI application and includes all API routes.
 The health check endpoint is defined here as it's version-independent.
 """
 
-from dotenv import load_dotenv
-
-load_dotenv()
+import config  # noqa: F401 - Load .env before other imports
 
 from fastapi import FastAPI
 

@@ -51,7 +51,7 @@ source .venv/bin/activate
 uvicorn main:app --reload
 ```
 
-The server automatically loads `.env` using python-dotenv.
+The server automatically loads `.env` using python-dotenv (local development only; use a secrets manager in production).
 
 Verify it's running:
 
@@ -69,7 +69,7 @@ source .venv/bin/activate
 python -m agent.cli
 ```
 
-The CLI automatically loads `.env` using python-dotenv.
+The CLI automatically loads `.env` using python-dotenv (local development only).
 
 ### Step 5: Try Example Commands
 

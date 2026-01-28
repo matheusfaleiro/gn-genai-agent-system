@@ -16,8 +16,11 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"main.py" = ["E402"]      # load_dotenv() must run before imports
-"agent/cli.py" = ["E402"] # load_dotenv() must run before imports
+"main.py" = ["I001"]       # config must be imported first to load .env
+"agent/cli.py" = ["I001"]  # config must be imported first to load .env
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "api", "agent"]
 
 [tool.ruff.format]
 quote-style = "double"

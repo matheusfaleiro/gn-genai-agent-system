@@ -13,7 +13,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY api/ api/
-COPY main.py .
+COPY config.py main.py ./
 
 RUN chown -R app:app /app
 USER app

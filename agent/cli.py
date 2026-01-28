@@ -3,9 +3,7 @@
 
 from __future__ import annotations
 
-from dotenv import load_dotenv
-
-load_dotenv()
+import config  # noqa: F401 - Load .env before other imports
 
 import itertools
 import logging

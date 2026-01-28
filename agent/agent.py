@@ -76,32 +76,59 @@ class TicketingAgent:
                 "or OPENAI_API_KEY."
             )
 
+    def _validate_required_args(
+        self, tool_name: str, arguments: dict, required: list[str]
+    ) -> str | None:
+        """Validate that required arguments are present. Returns error message or None."""
+        missing = [arg for arg in required if arg not in arguments]
+        if missing:
+            return f"Missing required arguments for {tool_name}: {', '.join(missing)}"
+        return None
+
     def _execute_tool(self, tool_name: str, arguments: dict) -> str:
         """Execute a tool and return the result as a string."""
         logger.debug("Executing tool: %s with args: %s", tool_name, arguments)
 
-        if tool_name == "create_ticket":
-            result = self.client.create_ticket(
-                title=arguments["title"],
-                description=arguments["description"],
-            )
-        elif tool_name == "list_tickets":
-            result = self.client.list_tickets(status=arguments.get("status"))
-        elif tool_name == "get_ticket":
-            result = self.client.get_ticket(ticket_id=arguments["ticket_id"])
-        elif tool_name == "update_ticket":
-            result = self.client.update_ticket(
-                ticket_id=arguments["ticket_id"],
-                title=arguments.get("title"),
-                description=arguments.get("description"),
-                status=arguments.get("status"),
-                resolution=arguments.get("resolution"),
-            )
-        elif tool_name == "delete_ticket":
-            result = self.client.delete_ticket(ticket_id=arguments["ticket_id"])
-        else:
-            logger.error("Unknown tool: %s", tool_name)
-            result = {"success": False, "error": f"Unknown tool: {tool_name}"}
+        try:
+            if tool_name == "create_ticket":
+                if error := self._validate_required_args(
+                    tool_name, arguments, ["title", "description"]
+                ):
+                    result = {"success": False, "error": error}
+                else:
+                    result = self.client.create_ticket(
+                        title=arguments["title"],
+                        description=arguments["description"],
+                    )
+            elif tool_name == "list_tickets":
+                result = self.client.list_tickets(status=arguments.get("status"))
+            elif tool_name == "get_ticket":
+                if error := self._validate_required_args(tool_name, arguments, ["ticket_id"]):
+                    result = {"success": False, "error": error}
+                else:
+                    result = self.client.get_ticket(ticket_id=arguments["ticket_id"])
+            elif tool_name == "update_ticket":
+                if error := self._validate_required_args(tool_name, arguments, ["ticket_id"]):
+                    result = {"success": False, "error": error}
+                else:
+                    result = self.client.update_ticket(
+                        ticket_id=arguments["ticket_id"],
+                        title=arguments.get("title"),
+                        description=arguments.get("description"),
+                        status=arguments.get("status"),
+                        resolution=arguments.get("resolution"),
+                    )
+            elif tool_name == "delete_ticket":
+                if error := self._validate_required_args(tool_name, arguments, ["ticket_id"]):
+                    result = {"success": False, "error": error}
+                else:
+                    result = self.client.delete_ticket(ticket_id=arguments["ticket_id"])
+            else:
+                logger.error("Unknown tool: %s", tool_name)
+                result = {"success": False, "error": f"Unknown tool: {tool_name}"}
+        except Exception as e:
+            logger.exception("Error executing tool %s", tool_name)
+            result = {"success": False, "error": f"Tool execution failed: {e}"}
 
         logger.debug("Tool result: %s", result)
         return json.dumps(result, indent=2, default=str)
@@ -148,6 +175,10 @@ class TicketingAgent:
                 tools=TOOLS,
             )
 
+            if not response.choices:
+                logger.error("No choices in API response")
+                return "I received an unexpected response from the AI service. Please try again."
+
             message = response.choices[0].message
 
             if message.tool_calls:
@@ -155,7 +186,11 @@ class TicketingAgent:
 
                 for tool_call in message.tool_calls:
                     tool_name = tool_call.function.name
-                    arguments = json.loads(tool_call.function.arguments)
+                    try:
+                        arguments = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError as e:
+                        logger.error("Failed to parse tool arguments: %s", e)
+                        arguments = {}
 
                     tool_result = self._execute_tool(tool_name, arguments)
 

@@ -30,7 +30,7 @@ class Spinner:
 
     def start(self) -> None:
         self.running = True
-        self.thread = threading.Thread(target=self._spin)
+        self.thread = threading.Thread(target=self._spin, daemon=True)
         self.thread.start()
 
     def stop(self) -> None:

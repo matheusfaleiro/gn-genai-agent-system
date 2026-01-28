@@ -260,11 +260,11 @@ class TestAuthentication:
         response = client_no_auth.get("/")
         assert response.status_code == 200
 
-    def test_missing_api_key_env_returns_401(self, monkeypatch):
-        """Should return 401 when API_KEY environment variable is not set."""
+    def test_missing_api_key_env_returns_500(self, monkeypatch):
+        """Should return 500 when API_KEY environment variable is not set."""
         monkeypatch.delenv("API_KEY", raising=False)
         clear_api_key_cache()
         client = TestClient(app)
         response = client.get("/v1/tickets")
-        assert response.status_code == 401
+        assert response.status_code == 500
         assert "not configured" in response.json()["detail"]

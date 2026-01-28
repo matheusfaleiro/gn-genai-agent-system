@@ -8,12 +8,17 @@ error handling and validation.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from api.auth import verify_api_key
 from api.models import Ticket, TicketCreate, TicketStatus, TicketUpdate
 from api.storage import storage
 
-router = APIRouter(prefix="/tickets", tags=["tickets"])
+router = APIRouter(
+    prefix="/tickets",
+    tags=["tickets"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 @router.post("", response_model=Ticket, status_code=status.HTTP_201_CREATED)

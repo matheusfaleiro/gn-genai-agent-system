@@ -47,8 +47,8 @@ async def verify_api_key(
 
     if not expected_key:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="API_KEY environment variable is not configured",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key authentication is not configured",
         )
 
     if not api_key:

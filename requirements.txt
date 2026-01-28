@@ -15,3 +15,7 @@ pydantic>=2.0.0,<3.0.0
 # OpenAI: Official client for OpenAI and Azure OpenAI APIs.
 # Used by the PR Review Bot and GenAI Agent for LLM interactions.
 openai>=2.0.0,<3.0.0
+
+# python-dotenv: Loads environment variables from .env files.
+# Simplifies local development by auto-loading configuration at startup.
+python-dotenv>=1.0.0,<2.0.0

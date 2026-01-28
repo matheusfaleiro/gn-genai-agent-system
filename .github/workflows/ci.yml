@@ -5,32 +5,52 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tf_environment:
+        description: "Environment (dev, staging, prod)"
+        required: false
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      location:
+        description: "Azure region"
+        required: false
+        default: "eastus"
+      sku_name:
+        description: "App Service SKU"
+        required: false
+        default: "B1"
+      python_version:
+        description: "Python version"
+        required: false
+        default: "3.11"
+      terraform_version:
+        description: "Terraform version"
+        required: false
+        default: "1.5.7"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: ${{ github.event.inputs.python_version || '3.11' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraform_version || '1.5.7' }}
+  TF_VAR_environment: ${{ github.event.inputs.tf_environment || 'dev' }}
+  TF_VAR_location: ${{ github.event.inputs.location || 'eastus' }}
+  TF_VAR_sku_name: ${{ github.event.inputs.sku_name || 'B1' }}
 
 jobs:
-  terraform:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.5.7"
-
-      - name: Check formatting
-        run: terraform fmt -check -recursive
-
-      - name: Initialize Terraform
-        run: terraform init -backend=false
-
-      - name: Validate configuration
-        run: terraform validate
-
+  # Stage 1: Code Quality (run first, fail fast)
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,7 +59,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install ruff
         run: pip install ruff==0.14.14
@@ -51,6 +71,7 @@ jobs:
         run: ruff check .
 
   test:
+    name: Test
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -60,7 +81,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: |
@@ -70,8 +91,36 @@ jobs:
       - name: Run tests with coverage
         run: pytest tests/ --cov=api --cov=agent --cov=main --cov-report=term-missing --cov-fail-under=80
 
-  docker:
+  # Stage 2: Validation (after code quality passes)
+  terraform:
+    name: Terraform Validate
     runs-on: ubuntu-latest
+    needs: [lint, test]
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize Terraform
+        run: terraform init -backend=false
+
+      - name: Validate configuration
+        run: terraform validate
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,7 +160,9 @@ jobs:
           path: /tmp/ticketing-api.tar
           retention-days: 1
 
+  # Stage 3: Security (after build passes)
   security:
+    name: Security Scan
     runs-on: ubuntu-latest
     needs: docker
     steps:
@@ -121,7 +172,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Scan Python dependencies
         uses: snyk/actions/python@0.4.0

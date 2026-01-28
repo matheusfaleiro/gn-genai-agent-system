@@ -267,4 +267,4 @@ class TestAuthentication:
         client = TestClient(app)
         response = client.get("/v1/tickets")
         assert response.status_code == 500
-        assert "not configured" in response.json()["detail"]
+        assert response.json()["detail"] == "Internal server error"

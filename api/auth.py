@@ -5,6 +5,7 @@ This module provides API key authentication for securing endpoints.
 
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 from functools import lru_cache
@@ -12,6 +13,8 @@ from typing import Optional
 
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
+
+logger = logging.getLogger(__name__)
 
 API_KEY_HEADER_NAME = "X-API-Key"
 API_KEY_HEADER = APIKeyHeader(name=API_KEY_HEADER_NAME, auto_error=False)
@@ -46,6 +49,7 @@ async def verify_api_key(
     expected_key = get_api_key()
 
     if not expected_key:
+        logger.error("API_KEY environment variable is not configured")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

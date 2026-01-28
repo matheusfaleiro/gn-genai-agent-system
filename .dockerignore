@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache
+.coverage
+htmlcov/
+.venv
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+tests/
+
+# Development
+requirements-dev.txt
+
+# Infrastructure
+infra/
+
+# Agent CLI (not needed for API container)
+agent/
+
+# Documentation
+*.md
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from types import TracebackType
 
 import httpx
@@ -24,9 +25,19 @@ class TicketingClient:
             result = client.list_tickets()
     """
 
-    def __init__(self, base_url: str = DEFAULT_BASE_URL, timeout: float = 30.0):
+    def __init__(
+        self,
+        base_url: str = DEFAULT_BASE_URL,
+        timeout: float = 30.0,
+        api_key: str | None = None,
+    ):
         self.base_url = base_url
-        self.client = httpx.Client(timeout=timeout)
+        headers = {}
+        # Use provided api_key or fall back to environment variable
+        key = api_key or os.getenv("API_KEY")
+        if key:
+            headers["X-API-Key"] = key
+        self.client = httpx.Client(timeout=timeout, headers=headers)
         logger.debug("Initialized client with base_url=%s", base_url)
 
     def __enter__(self) -> TicketingClient:

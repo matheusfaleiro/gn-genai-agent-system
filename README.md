@@ -48,14 +48,10 @@ Open a terminal and run:
 
 ```bash
 source .venv/bin/activate
-
-# Option A: Export from .env file
-export $(grep -v '^#' .env | xargs)
 uvicorn main:app --reload
-
-# Option B: Inline
-API_KEY=my-secret-key uvicorn main:app --reload
 ```
+
+The server automatically loads `.env` using python-dotenv.
 
 Verify it's running:
 
@@ -70,18 +66,10 @@ Open a second terminal and run:
 
 ```bash
 source .venv/bin/activate
-
-# Option A: Export from .env file
-export $(grep -v '^#' .env | xargs)
-python -m agent.cli
-
-# Option B: Inline (quick local testing)
-API_KEY=my-secret-key \
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com \
-AZURE_OPENAI_API_KEY=your-key \
-AZURE_OPENAI_DEPLOYMENT=your-deployment \
 python -m agent.cli
 ```
+
+The CLI automatically loads `.env` using python-dotenv.
 
 ### Step 5: Try Example Commands
 

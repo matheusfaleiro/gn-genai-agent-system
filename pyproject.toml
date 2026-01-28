@@ -15,6 +15,10 @@ ignore = [
     "B008",  # Allow function calls in defaults (FastAPI Query pattern)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E402"]      # load_dotenv() must run before imports
+"agent/cli.py" = ["E402"] # load_dotenv() must run before imports
+
 [tool.ruff.format]
 quote-style = "double"
 

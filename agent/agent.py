@@ -115,6 +115,23 @@ class TicketingAgent:
             self.messages = [system_msg] + recent_msgs
             logger.debug("Trimmed message history to %d messages", len(self.messages))
 
+    def _message_to_dict(self, message) -> dict:
+        """Convert an SDK message object to a plain dictionary."""
+        msg_dict = {"role": message.role, "content": message.content}
+        if message.tool_calls:
+            msg_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": tc.type,
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in message.tool_calls
+            ]
+        return msg_dict
+
     def chat(self, user_message: str) -> str:
         """Process a user message and return the agent's response."""
         self.messages.append({"role": "user", "content": user_message})
@@ -134,7 +151,7 @@ class TicketingAgent:
             message = response.choices[0].message
 
             if message.tool_calls:
-                self.messages.append(message)
+                self.messages.append(self._message_to_dict(message))
 
                 for tool_call in message.tool_calls:
                     tool_name = tool_call.function.name
@@ -150,7 +167,7 @@ class TicketingAgent:
                         }
                     )
             else:
-                self.messages.append(message)
+                self.messages.append(self._message_to_dict(message))
                 self._trim_message_history()
                 return message.content or ""
 

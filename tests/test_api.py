@@ -3,8 +3,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from api.auth import clear_api_key_cache
 from api.storage import storage
 from main import app
+
+TEST_API_KEY = "test-api-key"
 
 
 @pytest.fixture(autouse=True)
@@ -15,9 +18,24 @@ def clear_storage():
     storage._tickets.clear()
 
 
+@pytest.fixture(autouse=True)
+def set_api_key(monkeypatch):
+    """Set API_KEY for all tests and clear cache."""
+    clear_api_key_cache()
+    monkeypatch.setenv("API_KEY", TEST_API_KEY)
+    yield
+    clear_api_key_cache()
+
+
 @pytest.fixture
 def client():
-    """Create a test client."""
+    """Create a test client with API key header."""
+    return TestClient(app, headers={"X-API-Key": TEST_API_KEY})
+
+
+@pytest.fixture
+def client_no_auth():
+    """Create a test client without API key header."""
     return TestClient(app)
 
 
@@ -215,3 +233,38 @@ class TestStorageDirect:
             TicketUpdate(title="Updated"),
         )
         assert result is None
+
+
+class TestAuthentication:
+    """Tests for API key authentication."""
+
+    def test_request_without_api_key_returns_401(self, client_no_auth):
+        """Should return 401 Unauthorized when API key is not provided."""
+        response = client_no_auth.get("/v1/tickets")
+        assert response.status_code == 401
+        assert "Missing API key" in response.json()["detail"]
+
+    def test_request_with_invalid_api_key_returns_401(self, client_no_auth):
+        """Should return 401 Unauthorized when API key is invalid."""
+        response = client_no_auth.get("/v1/tickets", headers={"X-API-Key": "wrong-key"})
+        assert response.status_code == 401
+        assert "Invalid API key" in response.json()["detail"]
+
+    def test_request_with_valid_api_key_returns_200(self, client):
+        """Should return 200 OK when valid API key is provided."""
+        response = client.get("/v1/tickets")
+        assert response.status_code == 200
+
+    def test_health_check_does_not_require_api_key(self, client_no_auth):
+        """Health check endpoint should not require authentication."""
+        response = client_no_auth.get("/")
+        assert response.status_code == 200
+
+    def test_missing_api_key_env_returns_500(self, monkeypatch):
+        """Should return 500 when API_KEY environment variable is not set."""
+        monkeypatch.delenv("API_KEY", raising=False)
+        clear_api_key_cache()
+        client = TestClient(app)
+        response = client.get("/v1/tickets")
+        assert response.status_code == 500
+        assert "API_KEY environment variable is not configured" in response.json()["detail"]

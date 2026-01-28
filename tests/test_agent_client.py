@@ -7,8 +7,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent.client import TicketingClient
+from api.auth import clear_api_key_cache
 from api.storage import storage
 from main import app
+
+TEST_API_KEY = "test-api-key"
 
 
 @pytest.fixture(autouse=True)
@@ -19,17 +22,26 @@ def clear_storage():
     storage._tickets.clear()
 
 
+@pytest.fixture(autouse=True)
+def set_api_key(monkeypatch):
+    """Set API_KEY for all tests and clear cache."""
+    clear_api_key_cache()
+    monkeypatch.setenv("API_KEY", TEST_API_KEY)
+    yield
+    clear_api_key_cache()
+
+
 @pytest.fixture
 def api_client():
-    """Create a test client for the API."""
-    return TestClient(app)
+    """Create a test client for the API with auth header."""
+    return TestClient(app, headers={"X-API-Key": TEST_API_KEY})
 
 
 @pytest.fixture
 def agent_client(api_client):
     """Create an agent client that uses the test server."""
     # Use the test client's base URL
-    with TicketingClient(base_url="http://testserver/v1") as client:
+    with TicketingClient(base_url="http://testserver/v1", api_key=TEST_API_KEY) as client:
         # Patch the httpx client to use the test client
         client.client = api_client
         yield client

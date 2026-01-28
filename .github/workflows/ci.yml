@@ -69,3 +69,44 @@ jobs:
 
       - name: Run tests with coverage
         run: pytest tests/ --cov=api --cov=agent --cov=main --cov-report=term-missing --cov-fail-under=80
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ticketing-api:test .
+
+      - name: Cleanup previous container
+        run: docker rm -f api-test || true
+
+      - name: Run container
+        run: docker run -d -p 8000:8000 --name api-test ticketing-api:test
+
+      - name: Wait for health endpoint
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 1
+          done
+          echo "Health check failed after 30 attempts"
+          exit 1
+
+      - name: Stop container
+        run: docker stop api-test
+
+      - name: Save Docker image
+        run: docker save ticketing-api:test -o /tmp/ticketing-api.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/ticketing-api.tar
+          retention-days: 1

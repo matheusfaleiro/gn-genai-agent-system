@@ -212,3 +212,21 @@ Posts review comment via `gh pr comment`
 - Uses `subprocess` to run `gh` CLI commands
 - Chunks large diffs to fit token limits
 - Posts as a single comment (not inline reviews)
+
+## MCP Servers
+
+This project uses [Context7](https://context7.com) as an MCP server to provide up-to-date library documentation to Claude Code.
+
+### Setup
+```bash
+claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key <your-key>
+```
+
+### Usage
+When asking about libraries (FastAPI, Pydantic, OpenAI SDK), Context7 fetches current documentation instead of relying on training data. This helps with:
+- Accurate API signatures for recent library versions
+- Framework-specific best practices
+- Avoiding deprecated patterns
+
+### Available Tools
+Once configured, Claude Code can use `resolve-library-id` and `get-library-docs` to fetch documentation during conversations.

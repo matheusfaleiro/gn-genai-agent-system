@@ -7,13 +7,13 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from openai import AzureOpenAI, OpenAI
+from openai import AzureOpenAI
 
 from agent.client import TicketingClient
 from agent.tools import TOOLS
 
 if TYPE_CHECKING:
-    from openai import OpenAI as OpenAIClient
+    from openai import AzureOpenAI as AzureOpenAIClient
 
 logger = logging.getLogger(__name__)
 
@@ -37,53 +37,46 @@ MAX_TOOL_ITERATIONS = 10
 MAX_MESSAGE_HISTORY = 50
 
 
+def _get_openai_client() -> tuple[AzureOpenAIClient, str]:
+    """Get the Azure OpenAI client."""
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    azure_key = os.getenv("AZURE_OPENAI_API_KEY")
+    azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+    azure_version = os.getenv("AZURE_API_VERSION", "2024-12-01-preview")
+
+    if not azure_endpoint or not azure_key or not azure_deployment:
+        raise ValueError(
+            "Azure OpenAI credentials not configured. "
+            "Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT."
+        )
+
+    logger.info("Using Azure OpenAI: %s", azure_endpoint)
+    return (
+        AzureOpenAI(
+            azure_endpoint=azure_endpoint,
+            api_key=azure_key,
+            api_version=azure_version,
+        ),
+        azure_deployment,
+    )
+
+
+def _validate_required_args(tool_name: str, arguments: dict, required: list[str]) -> str | None:
+    """Validate that required arguments are present. Returns error message or None."""
+    missing = [arg for arg in required if arg not in arguments]
+    if missing:
+        return f"Missing required arguments for {tool_name}: {', '.join(missing)}"
+    return None
+
+
 class TicketingAgent:
-    """Agent that uses OpenAI function calling to interact with the Ticketing API."""
+    """Agent that uses Azure OpenAI function calling to interact with the Ticketing API."""
 
     def __init__(self, api_base_url: str = "http://localhost:8000/v1"):
         self.client = TicketingClient(base_url=api_base_url)
-        self.openai_client, self.model = self._get_openai_client()
+        self.openai_client, self.model = _get_openai_client()
         self.messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
         logger.info("Agent initialized with model=%s", self.model)
-
-    def _get_openai_client(self) -> tuple[OpenAIClient, str]:
-        """Get the appropriate OpenAI client (Azure or standard)."""
-        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        azure_key = os.getenv("AZURE_OPENAI_API_KEY")
-        azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-5-mini")
-        azure_version = os.getenv("AZURE_API_VERSION", "2024-12-01-preview")
-
-        openai_key = os.getenv("OPENAI_API_KEY")
-        openai_model = os.getenv("OPENAI_MODEL", "gpt-4")
-
-        if azure_endpoint and azure_key:
-            logger.info("Using Azure OpenAI: %s", azure_endpoint)
-            return (
-                AzureOpenAI(
-                    azure_endpoint=azure_endpoint,
-                    api_key=azure_key,
-                    api_version=azure_version,
-                ),
-                azure_deployment,
-            )
-        elif openai_key:
-            logger.info("Using OpenAI API")
-            return OpenAI(api_key=openai_key), openai_model
-        else:
-            raise ValueError(
-                "No API credentials configured. "
-                "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY, "
-                "or OPENAI_API_KEY."
-            )
-
-    def _validate_required_args(
-        self, tool_name: str, arguments: dict, required: list[str]
-    ) -> str | None:
-        """Validate that required arguments are present. Returns error message or None."""
-        missing = [arg for arg in required if arg not in arguments]
-        if missing:
-            return f"Missing required arguments for {tool_name}: {', '.join(missing)}"
-        return None
 
     def _execute_tool(self, tool_name: str, arguments: dict) -> str:
         """Execute a tool and return the result as a string."""
@@ -91,9 +84,7 @@ class TicketingAgent:
 
         try:
             if tool_name == "create_ticket":
-                if error := self._validate_required_args(
-                    tool_name, arguments, ["title", "description"]
-                ):
+                if error := _validate_required_args(tool_name, arguments, ["title", "description"]):
                     result = {"success": False, "error": error}
                 else:
                     result = self.client.create_ticket(
@@ -103,12 +94,12 @@ class TicketingAgent:
             elif tool_name == "list_tickets":
                 result = self.client.list_tickets(status=arguments.get("status"))
             elif tool_name == "get_ticket":
-                if error := self._validate_required_args(tool_name, arguments, ["ticket_id"]):
+                if error := _validate_required_args(tool_name, arguments, ["ticket_id"]):
                     result = {"success": False, "error": error}
                 else:
                     result = self.client.get_ticket(ticket_id=arguments["ticket_id"])
             elif tool_name == "update_ticket":
-                if error := self._validate_required_args(tool_name, arguments, ["ticket_id"]):
+                if error := _validate_required_args(tool_name, arguments, ["ticket_id"]):
                     result = {"success": False, "error": error}
                 else:
                     result = self.client.update_ticket(
@@ -119,7 +110,7 @@ class TicketingAgent:
                         resolution=arguments.get("resolution"),
                     )
             elif tool_name == "delete_ticket":
-                if error := self._validate_required_args(tool_name, arguments, ["ticket_id"]):
+                if error := _validate_required_args(tool_name, arguments, ["ticket_id"]):
                     result = {"success": False, "error": error}
                 else:
                     result = self.client.delete_ticket(ticket_id=arguments["ticket_id"])

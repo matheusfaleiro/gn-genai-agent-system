@@ -8,38 +8,26 @@ import pytest
 
 from agent.agent import MAX_MESSAGE_HISTORY, MAX_TOOL_ITERATIONS, SYSTEM_PROMPT
 
+AZURE_ENV = {
+    "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
+    "AZURE_OPENAI_API_KEY": "test-key",
+    "AZURE_OPENAI_DEPLOYMENT": "test-deployment",
+}
+
 
 class TestTicketingAgentInit:
     """Tests for agent initialization."""
 
     def test_init_fails_without_credentials(self):
         """Should raise an error when no API credentials are set."""
-        with patch.dict(
-            "os.environ",
-            {
-                "AZURE_OPENAI_ENDPOINT": "",
-                "AZURE_OPENAI_API_KEY": "",
-                "OPENAI_API_KEY": "",
-            },
-            clear=True,
-        ):
+        with patch.dict("os.environ", {}, clear=True):
             from agent.agent import TicketingAgent
 
-            with pytest.raises(ValueError, match="No API credentials"):
+            with pytest.raises(ValueError, match="Azure OpenAI credentials not configured"):
                 TicketingAgent()
 
-    def test_init_with_openai_credentials(self):
-        """Should initialize with OpenAI credentials."""
-        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):
-            with patch("agent.agent.OpenAI") as mock_openai:
-                from agent.agent import TicketingAgent
-
-                agent = TicketingAgent()
-                mock_openai.assert_called_once_with(api_key="test-key")
-                agent.close()
-
-    def test_init_with_azure_credentials(self):
-        """Should initialize with Azure OpenAI credentials."""
+    def test_init_fails_without_deployment(self):
+        """Should raise an error when deployment is missing."""
         with patch.dict(
             "os.environ",
             {
@@ -48,6 +36,14 @@ class TestTicketingAgentInit:
             },
             clear=True,
         ):
+            from agent.agent import TicketingAgent
+
+            with pytest.raises(ValueError, match="AZURE_OPENAI_DEPLOYMENT"):
+                TicketingAgent()
+
+    def test_init_with_azure_credentials(self):
+        """Should initialize with Azure OpenAI credentials."""
+        with patch.dict("os.environ", AZURE_ENV, clear=True):
             with patch("agent.agent.AzureOpenAI") as mock_azure:
                 from agent.agent import TicketingAgent
 
@@ -61,11 +57,11 @@ class TestTicketingAgentChat:
 
     @pytest.fixture
     def mock_agent(self):
-        """Create an agent with a mocked OpenAI client."""
-        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):
-            with patch("agent.agent.OpenAI") as mock_openai:
+        """Create an agent with a mocked Azure OpenAI client."""
+        with patch.dict("os.environ", AZURE_ENV, clear=True):
+            with patch("agent.agent.AzureOpenAI") as mock_azure:
                 mock_client = MagicMock()
-                mock_openai.return_value = mock_client
+                mock_azure.return_value = mock_client
 
                 from agent.agent import TicketingAgent
 
@@ -74,7 +70,7 @@ class TestTicketingAgentChat:
                 agent.close()
 
     def test_chat_returns_response(self, mock_agent):
-        """Should return response from OpenAI."""
+        """Should return response from Azure OpenAI."""
         agent, mock_client = mock_agent
 
         mock_message = MagicMock()
@@ -160,9 +156,9 @@ class TestTicketingAgentTools:
 
     @pytest.fixture
     def mock_agent(self):
-        """Create an agent with a mocked OpenAI client."""
-        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):
-            with patch("agent.agent.OpenAI"):
+        """Create an agent with a mocked Azure OpenAI client."""
+        with patch.dict("os.environ", AZURE_ENV, clear=True):
+            with patch("agent.agent.AzureOpenAI"):
                 from agent.agent import TicketingAgent
 
                 agent = TicketingAgent()
@@ -232,9 +228,9 @@ class TestMessageHistoryTrimming:
 
     @pytest.fixture
     def mock_agent(self):
-        """Create an agent with a mocked OpenAI client."""
-        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):
-            with patch("agent.agent.OpenAI"):
+        """Create an agent with a mocked Azure OpenAI client."""
+        with patch.dict("os.environ", AZURE_ENV, clear=True):
+            with patch("agent.agent.AzureOpenAI"):
                 from agent.agent import TicketingAgent
 
                 agent = TicketingAgent()
